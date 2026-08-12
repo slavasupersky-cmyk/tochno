@@ -288,6 +288,8 @@ const renderPage = (c, { logoMark, logoFull }) => `<!DOCTYPE html>
 <meta name="color-scheme" content="light dark">
 <title>${esc(c.meta.title)}</title>
 <meta name="description" content="${esc(c.meta.description)}">
+<meta name="generator" content="build.js · ${new Date().toISOString().slice(0, 16)}Z">
+
 <link rel="canonical" href="${esc(c.meta.url)}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(c.meta.title)}">
