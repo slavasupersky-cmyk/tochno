@@ -1,0 +1,49 @@
+name: Сборка и публикация на GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # кнопка «Run workflow» на вкладке Actions
+
+# Разрешения нужны механизму публикации Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Параллельные выкладки не нужны: важен только последний коммит.
+# Уже идущую сборку не отменяем, чтобы не оборвать выкладку на полпути.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Зависимостей у проекта нет, поэтому npm ci не нужен
+      - name: Собрать сайт
+        run: node build.js
+
+      - name: Проверить, что картинки на месте
+        run: node images.js
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
