@@ -133,13 +133,13 @@ npm run images
 
 Сайт живёт на GitHub Pages: **https://slavasupersky-cmyk.github.io/tochno/**
 
-В репозитории `dist/` не хранится — он генерируется. Поэтому Pages отдаёт не `main`, а ветку `gh-pages`, куда кладётся результат сборки.
+Публикация автоматическая: `.github/workflows/deploy.yml` собирает сайт при каждом пуше в `main` и выкладывает результат. Вручную ничего запускать не нужно.
 
-**Сейчас:** `npm run deploy` — собирает сайт и перезаписывает `gh-pages`. Ветка каждый раз пересоздаётся с нуля, истории в ней нет и не нужно.
+В репозитории `dist/` не хранится — он генерируется на стороне GitHub. Заодно workflow прогоняет `node images.js`: если какая-то картинка потерялась, сборка упадёт до выкладки, а не после.
 
-**Как задумано:** `.github/workflows/deploy.yml` делает то же самое сам при каждом пуше в `main`. Чтобы workflow попал в репозиторий, токену нужно право **Workflows: Read and write** — без него GitHub отклоняет пуш файлов из `.github/workflows/`. Как заработает, `deploy.js` и ветку `gh-pages` можно удалить.
+Настройка одна, уже сделана: Settings → Pages → Source → **GitHub Actions**. Ход сборки виден на вкладке Actions, там же кнопка «Run workflow» для ручного запуска.
 
-Настройки Pages: Settings → Pages → Source → Deploy from a branch → `gh-pages` / `(root)`. После перехода на Actions там же выбирается Source → GitHub Actions.
+Запасной путь на случай, если Actions недоступны: `npm run deploy` собирает сайт и кладёт его в ветку `gh-pages`. Тогда в настройках Pages нужно выбрать Source → Deploy from a branch → `gh-pages` / `(root)`.
 
 Сайт лежит в подпапке `/tochno/`, и это работает: все пути в собранном HTML относительные.
 
