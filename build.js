@@ -13,7 +13,8 @@
 
 'use strict';
 
-const fs   = require('node:fs');
+const fs     = require('node:fs');
+const crypto = require('node:crypto');
 const path = require('node:path');
 
 const SRC  = path.join(__dirname, 'src');
@@ -284,7 +285,7 @@ const renderContacts = (c, company) => {
       <div class="map">
         <iframe src="${esc(map)}" title="Карта: ${esc(company.address)}" loading="lazy" allowfullscreen></iframe>
       </div>
-      <a class="map__link label" href="${esc(company.mapUrl)}" target="_blank" rel="noopener">${esc(company.mapLinkLabel)}</a>
+      <a class="map__link label" href="${esc(encodeURI(company.mapUrl))}" target="_blank" rel="noopener">${esc(company.mapLinkLabel)}</a>
     </div>
 
     <form class="lead-form reveal" data-form novalidate>
@@ -322,8 +323,16 @@ const renderFooter = (c, logoFull, base = '') => `
    Документ целиком
    ========================================================================== */
 
+/**
+ * Короткий хэш содержимого файла. Дописывается к адресам style.css и site.js,
+ * чтобы браузер не отдавал старую версию после выкладки: при любой правке
+ * адрес меняется, и файл гарантированно перезапрашивается.
+ */
+const hash = (file) =>
+  crypto.createHash('md5').update(fs.readFileSync(file)).digest('hex').slice(0, 8);
+
 /** Общая «шапка» документа для обеих страниц. */
-const head = (c, { title, description, canonical, extra = '' }) => `<!DOCTYPE html>
+const head = (c, { title, description, canonical, assets, extra = '' }) => `<!DOCTYPE html>
 <html lang="${esc(c.meta.lang)}">
 <head>
 <meta charset="utf-8">
@@ -333,12 +342,13 @@ const head = (c, { title, description, canonical, extra = '' }) => `<!DOCTYPE ht
 <meta name="description" content="${esc(description)}">
 <meta name="generator" content="build.js · ${new Date().toISOString().slice(0, 16)}Z">
 <link rel="canonical" href="${esc(canonical)}">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=${assets.css}">
 <script>document.documentElement.className = "js";</script>
 ${extra}</head>`;
 
 /** Вторая страница: политика конфиденциальности. */
-const renderPrivacy = (c, { logoMark, logoFull }) => `${head(c, {
+const renderPrivacy = (c, { logoMark, logoFull, assets }) => `${head(c, {
+  assets,
   title: c.privacy.title,
   description: c.privacy.description,
   canonical: c.meta.url + 'privacy.html',
@@ -361,12 +371,12 @@ ${renderMenu(c, './')}
 </main>
 
 ${renderFooter(c, logoFull, './')}
-<script src="site.js" defer></script>
+<script src="site.js?v=${assets.js}" defer></script>
 </body>
 </html>
 `;
 
-const renderPage = (c, { logoMark, logoFull }) => `<!DOCTYPE html>
+const renderPage = (c, { logoMark, logoFull, assets }) => `<!DOCTYPE html>
 <html lang="${esc(c.meta.lang)}">
 <head>
 <meta charset="utf-8">
@@ -383,7 +393,7 @@ const renderPage = (c, { logoMark, logoFull }) => `<!DOCTYPE html>
 <meta property="og:image" content="${esc(c.meta.url)}${esc(c.meta.ogImage)}">
 <meta property="og:locale" content="ru_RU">
 <link rel="preload" as="image" href="${esc(c.hero.image.src)}.webp" type="image/webp" fetchpriority="high">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=${assets.css}">
 <script>document.documentElement.className = "js";</script>
 <script type="application/ld+json">${JSON.stringify({
   '@context': 'https://schema.org',
@@ -413,7 +423,7 @@ ${renderContacts(c.contacts, c.company)}
 </main>
 
 ${renderFooter(c, logoFull)}
-<script src="site.js" defer></script>
+<script src="site.js?v=${assets.js}" defer></script>
 </body>
 </html>
 `;
@@ -448,14 +458,20 @@ function build() {
   }
   fs.mkdirSync(DIST, { recursive: true });
 
-  fs.writeFileSync(path.join(DIST, 'index.html'),   renderPage(content,    { logoMark, logoFull }));
-  fs.writeFileSync(path.join(DIST, 'privacy.html'), renderPrivacy(content, { logoMark, logoFull }));
+  // Сначала статика: адреса страниц зависят от её содержимого.
   fs.writeFileSync(path.join(DIST, 'style.css'), fs.readFileSync(path.join(SRC, 'styles/style.css')));
   fs.writeFileSync(path.join(DIST, 'site.js'),   fs.readFileSync(path.join(SRC, 'scripts/site.js')));
+  const assets = {
+    css: hash(path.join(DIST, 'style.css')),
+    js:  hash(path.join(DIST, 'site.js')),
+  };
+
+  fs.writeFileSync(path.join(DIST, 'index.html'),   renderPage(content,    { logoMark, logoFull, assets }));
+  fs.writeFileSync(path.join(DIST, 'privacy.html'), renderPrivacy(content, { logoMark, logoFull, assets }));
   copyDir(path.join(SRC, 'images'), path.join(DIST, 'images'));
 
   const kb = (p) => (fs.statSync(p).size / 1024).toFixed(1).padStart(6) + ' КБ';
-  console.log('Собрано в dist/');
+  console.log(`Собрано в dist/  (style.css?v=${assets.css}, site.js?v=${assets.js})`);
   console.log('  index.html   ' + kb(path.join(DIST, 'index.html')));
   console.log('  privacy.html ' + kb(path.join(DIST, 'privacy.html')));
   console.log('  style.css    ' + kb(path.join(DIST, 'style.css')));

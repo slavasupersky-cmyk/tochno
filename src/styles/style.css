@@ -450,6 +450,7 @@
     grid-auto-columns: minmax(17rem, 22rem);
     gap: var(--gap);
     padding-inline: var(--gutter);
+    padding-bottom: 1rem;          /* место под полосу прокрутки */
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scroll-snap-type: inline mandatory;
