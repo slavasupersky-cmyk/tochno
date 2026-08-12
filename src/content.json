@@ -70,7 +70,8 @@
       {
         "label": "Оценить недвижимость",
         "href": "#analitika",
-        "style": "ghost"
+        "style": "ghost",
+        "mobile": false
       }
     ],
     "stats": [

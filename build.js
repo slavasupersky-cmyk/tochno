@@ -66,8 +66,9 @@ const picture = (img, { className = '', loading = 'lazy', sizes = null } = {}) =
       </picture>`;
 };
 
+/** Кнопка. `mobile: false` в content.json прячет её на узких экранах. */
 const btn = (button, variant) =>
-  `<a class="btn btn--${variant}" href="${esc(button.href)}">${esc(button.label)}</a>`;
+  `<a class="btn btn--${variant}${button.mobile === false ? ' btn--wide-only' : ''}" href="${esc(button.href)}">${esc(button.label)}</a>`;
 
 const buttonRow = (buttons, map, extraClass = '') =>
   `<div class="btn-row${extraClass ? ' ' + extraClass : ''}">

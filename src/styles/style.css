@@ -672,9 +672,13 @@
     .hero .eyebrow  { margin-bottom: 0.75rem; }
     .hero__inner    { padding-bottom: 1rem; }
 
-    /* Цифры показателей на телефоне мельче. Меняем не правило, а токен
-       в границах блока — шкала остаётся единственным источником размеров. */
-    .hero .stats    { --fs-number: 1.625rem; }
+    /* Кнопки, помеченные в content.json как «не для телефона». */
+    .btn--wide-only { display: none; }
+
+    /* Цифры и подписи показателей на телефоне мельче. Меняем не правила,
+       а токены в границах блока — шкала остаётся единственным
+       источником размеров. */
+    .hero .stats    { --fs-number: 1.625rem; --fs-label: 0.6875rem; }
     .stats__item    { padding: 0.75rem 0.5rem 0; }
     .stats__label   { letter-spacing: 0.1em; }
   }
