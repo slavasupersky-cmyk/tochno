@@ -8,6 +8,7 @@
     "dev": "node build.js && node --run serve",
     "serve": "npx --yes http-server dist -p 8080 -c-1 -o",
     "texts:export": "node texts.js export",
+    "texts:rtf": "node texts.js export --rtf",
     "texts:import": "node texts.js import && node build.js",
     "images": "node images.js"
   },
