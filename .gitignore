@@ -1,0 +1,19 @@
+# Результат сборки — генерируется из src/, в репозитории не хранится
+dist/
+
+# Node
+node_modules/
+npm-debug.log*
+.npm/
+
+# Секреты
+.env
+.env.*
+*.pem
+
+# ОС и редакторы
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

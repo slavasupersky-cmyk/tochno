@@ -1,0 +1,15 @@
+{
+  "name": "tochno",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Сайт агентства недвижимости «ТОЧНО.» — статическая сборка из content.json",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && node --run serve",
+    "serve": "npx --yes http-server dist -p 8080 -c-1 -o"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
