@@ -10,7 +10,8 @@
     "texts:export": "node texts.js export",
     "texts:rtf": "node texts.js export --rtf",
     "texts:import": "node texts.js import && node build.js",
-    "images": "node images.js"
+    "images": "node images.js",
+    "deploy": "node deploy.js"
   },
   "engines": {
     "node": ">=18"
