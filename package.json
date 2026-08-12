@@ -6,7 +6,10 @@
   "scripts": {
     "build": "node build.js",
     "dev": "node build.js && node --run serve",
-    "serve": "npx --yes http-server dist -p 8080 -c-1 -o"
+    "serve": "npx --yes http-server dist -p 8080 -c-1 -o",
+    "texts:export": "node texts.js export",
+    "texts:import": "node texts.js import && node build.js",
+    "images": "node images.js"
   },
   "engines": {
     "node": ">=18"

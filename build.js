@@ -245,7 +245,7 @@ const renderContacts = (c, company) => {
         <div class="consents">
           ${join(f.consents, (con) => `<label>
             <input type="checkbox" name="${esc(con.name)}" required>
-            <span>${esc(con.text)}${con.linkLabel ? `<a href="${esc(con.linkHref)}">${esc(con.linkLabel)}</a>` : ''}</span>
+            <span>${esc(con.text)}${con.linkLabel ? ` <a href="${esc(con.linkHref)}">${esc(con.linkLabel)}</a>` : ''}</span>
           </label>`)}
         </div>
         <button class="btn btn--solid btn--block" type="submit" data-submit data-sent-label="${esc(f.submitted)}" disabled>${esc(f.submit)}</button>
