@@ -224,8 +224,8 @@ const renderAbout = (a) => `
       <div class="stack">
         ${join(a.paragraphs, (t) => `<p class="lead">${esc(t)}</p>`)}
       </div>
-      ${buttonRow([a.cta], { default: 'solid' })}
       <p class="signature label">${esc(a.signature)}</p>
+      ${buttonRow([a.cta], { default: 'solid' })}
     </div>
   </div>
 </section>`;
@@ -308,7 +308,6 @@ const renderContacts = (c, company) => {
 
 const renderFooter = (c, logoFull, base = '') => `
 <footer class="footer on-night">
-  <div class="footer__logo">${logoFull}</div>
   <div class="footer__grid">
     ${join(c.footer.columns, (col) => `<div>${
       col.links
@@ -316,7 +315,11 @@ const renderFooter = (c, logoFull, base = '') => `
         : col.lines.map(esc).join('<br>')
     }</div>`)}
   </div>
-  <p class="footer__legal">${esc(c.footer.legal)}</p>
+  <div class="footer__logo">${logoFull}</div>
+  <div class="footer__bottom">
+    <a href="${esc(c.footer.privacyHref)}">${esc(c.footer.privacyLabel)}</a>
+    <p class="footer__legal">${esc(c.footer.legal)}</p>
+  </div>
 </footer>`;
 
 /* ==========================================================================
