@@ -84,6 +84,15 @@ const sectionHead = (block, { lead = true } = {}) => `
    Секции
    ========================================================================== */
 
+/**
+ * Ссылка на секцию главной страницы. На самой главной это простой якорь,
+ * на внутренних страницах к нему добавляется путь — иначе якорь ведёт
+ * в пустоту, потому что секции с таким id на странице нет.
+ * `#top` и `#menu` есть на каждой странице, их не трогаем.
+ */
+const sectionLink = (href, base) =>
+  href.startsWith('#') && !['#top', '#menu'].includes(href) ? base + href : href;
+
 const renderHeader = (c, logoMark) => `
 <header class="header" data-header>
   <a class="header__logo" href="#top" aria-label="${esc(c.company.name)}">${logoMark}</a>
@@ -93,11 +102,11 @@ const renderHeader = (c, logoMark) => `
   </div>
 </header>`;
 
-const renderMenu = (c) => `
+const renderMenu = (c, base = '') => `
 <nav class="menu on-night" id="menu" aria-label="Основная навигация">
   <a class="menu__close" href="#top">${esc(c.menu.closeLabel)}</a>
   ${join(c.nav, (item, i) =>
-    `<a class="menu__item" href="#${esc(item.id)}">${esc(item.label)}<sup>${String(i + 1).padStart(2, '0')}</sup></a>`)}
+    `<a class="menu__item" href="${esc(sectionLink('#' + item.id, base))}">${esc(item.label)}<sup>${String(i + 1).padStart(2, '0')}</sup></a>`)}
   <div class="menu__foot">
     <a href="${esc(c.company.phoneHref)}">${esc(c.company.phone)}</a><br>
     ${esc(c.company.address)}<br>
@@ -106,7 +115,20 @@ const renderMenu = (c) => `
   </div>
 </nav>`;
 
-const renderHero = (h) => `
+/**
+ * Сколько сделок проведено на указанную дату.
+ * База и скорость лежат в content.json, чтобы правились без кода.
+ */
+const dealsOn = (deals, date) => {
+  const days = (date - new Date(deals.baseDate)) / 86400000;
+  const perDay = (deals.perMonth * 12) / 365.25;
+  return deals.baseCount + Math.max(0, Math.floor(days * perDay));
+};
+
+/** 10787 → «10 787», неразрывный пробел, чтобы число не рвалось по строкам. */
+const ru = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+const renderHero = (h, deals) => `
 <section class="hero on-night">
   <div class="hero__media">${picture(h.image, { loading: 'eager', sizes: '100vw' })}</div>
   <div class="hero__inner">
@@ -115,10 +137,21 @@ const renderHero = (h) => `
     <p class="hero__sub">${esc(h.sub)}</p>
     ${buttonRow(h.buttons, { primary: 'primary', ghost: 'ghost', default: 'primary' })}
     <div class="stats">
-      ${join(h.stats, (s) => `<div class="stats__item">
-        <b class="stats__value">${esc(s.value)}</b>
+      ${join(h.stats, (s) => {
+        // Счётчик: в HTML попадает значение на момент сборки, чтобы число было
+        // видно и без JS и попало в поисковую выдачу. Скрипт пересчитает его
+        // при открытии страницы — параметры расчёта лежат в data-атрибутах.
+        const counter = s.counter === 'deals';
+        const value = counter ? ru(dealsOn(deals, new Date())) : esc(s.value);
+        const attrs = counter
+          ? ` class="stats__value accent" data-deals data-base="${deals.baseCount}"` +
+            ` data-since="${esc(deals.baseDate)}" data-per-month="${deals.perMonth}"`
+          : ' class="stats__value"';
+        return `<div class="stats__item">
+        <b${attrs}>${value}</b>
         <span class="stats__label">${esc(s.label)}</span>
-      </div>`)}
+      </div>`;
+      })}
     </div>
   </div>
 </section>`;
@@ -195,12 +228,14 @@ const renderAbout = (a) => `
   </div>
 </section>`;
 
+// Отзывов много, поэтому не сетка, а горизонтальная лента.
+// Прокрутка нативная: работает мышью, трекпадом, пальцем и с клавиатуры.
 const renderReviews = (r) => `
-<section class="section wrap">
-  ${sectionHead(r)}
-  <div class="grid reveal">
+<section class="section">
+  <div class="wrap">${sectionHead(r)}</div>
+  <div class="scroller reveal" tabindex="0" role="region" aria-label="Отзывы клиентов">
     ${join(r.items, (item) => `<blockquote class="review">
-      <div class="review__stars" aria-label="Оценка ${item.stars} из 5">${'★'.repeat(item.stars)}</div>
+      <div class="review__stars" aria-label="Оценка ${item.stars} из 5">${'★'.repeat(item.stars)}${'☆'.repeat(5 - item.stars)}</div>
       <p>${esc(item.text)}</p>
       <footer class="review__who label">${esc(item.who)}</footer>
     </blockquote>`)}
@@ -225,51 +260,58 @@ const renderFaq = (f) => `
   </div>
 </section>`;
 
+const field = (f) =>
+  f.type === 'textarea'
+    ? `<textarea name="${esc(f.name)}" rows="${f.rows || 4}" placeholder="${esc(f.placeholder)}"
+            aria-label="${esc(f.label)}"${f.required ? ' required' : ''}></textarea>`
+    : `<input type="${esc(f.type)}" name="${esc(f.name)}" placeholder="${esc(f.placeholder)}"
+            aria-label="${esc(f.label)}"${f.required ? ' required' : ''}>`;
+
+/** Слева — реквизиты и карта, справа — форма. */
 const renderContacts = (c, company) => {
   const f = c.form;
+  const map = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(company.address)}&z=17`;
   return `
 <section class="section wrap" id="${esc(c.id)}">
   ${sectionHead(c)}
   <div class="contacts">
+
     <div class="reveal">
       <dl class="details">
         ${join(c.details, (d) => `<dt class="label">${esc(d.term)}</dt>
         <dd>${d.href ? `<a href="${esc(d.href)}">${lines(d.value)}</a>` : lines(d.value)}</dd>`)}
       </dl>
-
-      <form data-form novalidate>
-        <div class="form__fields">
-          ${join(f.fields, (field) => `<input type="${esc(field.type)}" name="${esc(field.name)}"
-            placeholder="${esc(field.placeholder)}" aria-label="${esc(field.label)}"${field.required ? ' required' : ''}>`)}
-        </div>
-        <div class="consents">
-          ${join(f.consents, (con) => `<label>
-            <input type="checkbox" name="${esc(con.name)}" required>
-            <span>${esc(con.text)}${con.linkLabel ? ` <a href="${esc(con.linkHref)}">${esc(con.linkLabel)}</a>` : ''}</span>
-          </label>`)}
-        </div>
-        <button class="btn btn--solid btn--block" type="submit" data-submit data-sent-label="${esc(f.submitted)}" disabled>${esc(f.submit)}</button>
-        <p class="form__success" data-success role="status">${esc(f.success)}</p>
-      </form>
+      <div class="map">
+        <iframe src="${esc(map)}" title="Карта: ${esc(company.address)}" loading="lazy" allowfullscreen></iframe>
+      </div>
+      <a class="map__link label" href="${esc(company.mapUrl)}" target="_blank" rel="noopener">${esc(company.mapLinkLabel)}</a>
     </div>
 
-    <div class="map reveal">
-      <div class="map__road map__road--h"></div>
-      <div class="map__road map__road--v"></div>
-      <div class="map__pin"><div class="map__dot"></div><b>${esc(company.addressShort)}</b></div>
-      <a class="map__link" href="${esc(company.mapUrl)}" target="_blank" rel="noopener">${esc(company.mapLinkLabel)}</a>
-    </div>
+    <form class="lead-form reveal" data-form novalidate>
+      <div class="form__fields">
+        ${join(f.fields, field)}
+      </div>
+      <div class="consents">
+        ${join(f.consents, (con) => `<label>
+          <input type="checkbox" name="${esc(con.name)}" required>
+          <span>${esc(con.text)}${con.linkLabel ? ` <a href="${esc(con.linkHref)}">${esc(con.linkLabel)}</a>` : ''}</span>
+        </label>`)}
+      </div>
+      <button class="btn btn--accent" type="submit" data-submit data-sent-label="${esc(f.submitted)}" disabled>${esc(f.submit)}</button>
+      <p class="form__success" data-success role="status">${esc(f.success)}</p>
+    </form>
+
   </div>
 </section>`;
 };
 
-const renderFooter = (c, logoFull) => `
+const renderFooter = (c, logoFull, base = '') => `
 <footer class="footer on-night">
   <div class="footer__logo">${logoFull}</div>
   <div class="footer__grid">
     ${join(c.footer.columns, (col) => `<div>${
       col.links
-        ? col.links.map((l) => `<a href="${esc(l.href)}">${esc(l.label)}</a>`).join('<br>')
+        ? col.links.map((l) => `<a href="${esc(sectionLink(l.href, base))}">${esc(l.label)}</a>`).join('<br>')
         : col.lines.map(esc).join('<br>')
     }</div>`)}
   </div>
@@ -279,6 +321,50 @@ const renderFooter = (c, logoFull) => `
 /* ==========================================================================
    Документ целиком
    ========================================================================== */
+
+/** Общая «шапка» документа для обеих страниц. */
+const head = (c, { title, description, canonical, extra = '' }) => `<!DOCTYPE html>
+<html lang="${esc(c.meta.lang)}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}">
+<meta name="generator" content="build.js · ${new Date().toISOString().slice(0, 16)}Z">
+<link rel="canonical" href="${esc(canonical)}">
+<link rel="stylesheet" href="style.css">
+<script>document.documentElement.className = "js";</script>
+${extra}</head>`;
+
+/** Вторая страница: политика конфиденциальности. */
+const renderPrivacy = (c, { logoMark, logoFull }) => `${head(c, {
+  title: c.privacy.title,
+  description: c.privacy.description,
+  canonical: c.meta.url + 'privacy.html',
+  extra: '<meta name="robots" content="noindex">\n',
+})}
+<body>
+${renderHeader(c, logoMark)}
+${renderMenu(c, './')}
+
+<main id="top" class="section wrap doc">
+  <p class="eyebrow">${esc(c.company.name)}</p>
+  ${heading(1, c.privacy.heading)}
+  <p class="lead">${esc(c.privacy.updated)}</p>
+  ${join(c.privacy.sections, (s) => `
+  <section class="doc__block">
+    <h2>${esc(s.title)}</h2>
+    ${join(s.paragraphs, (t) => `<p>${esc(t)}</p>`)}
+  </section>`)}
+  <p class="btn-row"><a class="btn btn--solid" href="./">${esc(c.privacy.backLabel)}</a></p>
+</main>
+
+${renderFooter(c, logoFull, './')}
+<script src="site.js" defer></script>
+</body>
+</html>
+`;
 
 const renderPage = (c, { logoMark, logoFull }) => `<!DOCTYPE html>
 <html lang="${esc(c.meta.lang)}">
@@ -315,10 +401,10 @@ ${renderHeader(c, logoMark)}
 ${renderMenu(c)}
 
 <main id="top">
-${renderHero(c.hero)}
+${renderHero(c.hero, c.deals)}
 ${renderServices(c.services)}
 ${renderProcess(c.process)}
-${renderFormat(c.format)}
+${renderFormat(c.geografiya)}
 ${renderAnalytics(c.analytics)}
 ${renderAbout(c.about)}
 ${renderReviews(c.reviews)}
@@ -362,17 +448,19 @@ function build() {
   }
   fs.mkdirSync(DIST, { recursive: true });
 
-  fs.writeFileSync(path.join(DIST, 'index.html'), renderPage(content, { logoMark, logoFull }));
+  fs.writeFileSync(path.join(DIST, 'index.html'),   renderPage(content,    { logoMark, logoFull }));
+  fs.writeFileSync(path.join(DIST, 'privacy.html'), renderPrivacy(content, { logoMark, logoFull }));
   fs.writeFileSync(path.join(DIST, 'style.css'), fs.readFileSync(path.join(SRC, 'styles/style.css')));
   fs.writeFileSync(path.join(DIST, 'site.js'),   fs.readFileSync(path.join(SRC, 'scripts/site.js')));
   copyDir(path.join(SRC, 'images'), path.join(DIST, 'images'));
 
   const kb = (p) => (fs.statSync(p).size / 1024).toFixed(1).padStart(6) + ' КБ';
   console.log('Собрано в dist/');
-  console.log('  index.html ' + kb(path.join(DIST, 'index.html')));
-  console.log('  style.css  ' + kb(path.join(DIST, 'style.css')));
-  console.log('  site.js    ' + kb(path.join(DIST, 'site.js')));
-  console.log('  images/    ' + fs.readdirSync(path.join(DIST, 'images')).length + ' файлов');
+  console.log('  index.html   ' + kb(path.join(DIST, 'index.html')));
+  console.log('  privacy.html ' + kb(path.join(DIST, 'privacy.html')));
+  console.log('  style.css    ' + kb(path.join(DIST, 'style.css')));
+  console.log('  site.js      ' + kb(path.join(DIST, 'site.js')));
+  console.log('  images/      ' + fs.readdirSync(path.join(DIST, 'images')).length + ' файлов');
 }
 
 build();

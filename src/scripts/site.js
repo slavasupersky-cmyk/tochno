@@ -3,24 +3,44 @@
 (() => {
   'use strict';
 
-  /* --- Шапка становится непрозрачной после первого экрана ---------------- */
+  /* --- Шапка ------------------------------------------------------------
+     Плашка появляется при первом же движении скролла, а не после первого
+     экрана: логотип белым по светлой фотографии сливается с картинкой. */
   const header = document.querySelector('[data-header]');
   if (header) {
-    const sync = () => header.classList.toggle('is-solid', scrollY > innerHeight * 0.82);
+    const sync = () => header.classList.toggle('is-solid', scrollY > 8);
     addEventListener('scroll', sync, { passive: true });
     sync();
+  }
+
+  /* --- Счётчик сделок ----------------------------------------------------
+     В HTML лежит число на момент сборки — оно видно и без скрипта.
+     Здесь пересчитываем его на сегодня от базы и скорости из data-атрибутов. */
+  const counter = document.querySelector('[data-deals]');
+  if (counter) {
+    const base     = Number(counter.dataset.base);
+    const since    = new Date(counter.dataset.since);
+    const perDay   = (Number(counter.dataset.perMonth) * 12) / 365.25;
+    const days     = (Date.now() - since.getTime()) / 86400000;
+    const total    = base + Math.max(0, Math.floor(days * perDay));
+    counter.textContent = total.toLocaleString('ru-RU').replace(/ /g, ' ');
   }
 
   /* --- Форма заявки ------------------------------------------------------ */
   const form = document.querySelector('[data-form]');
   if (form) {
-    const submit   = form.querySelector('[data-submit]');
-    const success  = form.querySelector('[data-success]');
-    const consents = [...form.querySelectorAll('input[type="checkbox"]')];
+    const submit  = form.querySelector('[data-submit]');
+    const success = form.querySelector('[data-success]');
 
-    const syncSubmit = () => { submit.disabled = !consents.every((c) => c.checked); };
-    consents.forEach((c) => c.addEventListener('change', syncSubmit));
-    syncSubmit();
+    // Кнопка оживает, когда заполнены обязательные поля и стоит галочка.
+    const sync = () => {
+      const ready = form.checkValidity();
+      submit.disabled = !ready;
+      submit.classList.toggle('is-ready', ready);
+    };
+    form.addEventListener('input', sync);
+    form.addEventListener('change', sync);
+    sync();
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -29,6 +49,7 @@
       // TODO: заменить на реальную отправку (fetch на бэкенд или CRM).
       success.classList.add('is-visible');
       submit.disabled = true;
+      submit.classList.remove('is-ready');
       submit.textContent = submit.dataset.sentLabel || 'Отправлено';
     });
   }
