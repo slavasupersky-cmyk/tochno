@@ -39,13 +39,25 @@
     --c-night-accent-ink:#0b0b0b;
 
     /* --- Типографика ------------------------------------------------------
-       Четыре размера для контента + один служебный для капслок-подписей.
-       Больше размеров в проекте не заводим. */
-    --fs-display: clamp(2.375rem, 7.2vw, 4.75rem);  /*  38 → 76px — h1        */
-    --fs-title:   clamp(1.75rem,  4.8vw, 3.25rem);  /*  28 → 52px — h2        */
-    --fs-heading: clamp(1.1875rem, 2vw, 1.5rem);    /*  19 → 24px — h3, поля  */
-    --fs-body:    1rem;                             /*  16px      — весь текст*/
-    --fs-label:   0.75rem;                          /*  12px      — капслок   */
+       Шесть ступеней, у каждой одна роль. Новых размеров не заводим:
+       если нужен акцент — берём вес, цвет или капслок, но не кегль.
+
+         display  заголовок первого экрана, и только он
+         number   крупные цифры: показатели на первом экране
+         title    заголовки секций и пункты меню
+         heading  подзаголовки, названия карточек, вопросы, значения полей
+         lead     вводные абзацы под заголовком секции
+         body     весь основной текст, кнопки, поля ввода
+         label    капслок-подписи, надзаголовки, подвал, мелкий текст
+
+       В исходнике мелких размеров было три (11, 12 и 13px) — свёл в один. */
+    --fs-display: clamp(2.375rem, 7.2vw, 4.75rem);   /*  38 → 76px */
+    --fs-title:   clamp(1.75rem,  4.8vw, 3.25rem);   /*  28 → 52px */
+    --fs-number:  clamp(1.375rem, 3.4vw, 2rem);      /*  22 → 32px */
+    --fs-heading: clamp(1.1875rem, 2vw, 1.5rem);     /*  19 → 24px */
+    --fs-lead:    clamp(1rem, 1.5vw, 1.25rem);       /*  16 → 20px */
+    --fs-body:    1rem;                              /*  16px      */
+    --fs-label:   0.75rem;                           /*  12px      */
 
     --lh-tight: 1.05;
     --lh-snug:  1.2;
@@ -55,7 +67,14 @@
                Roboto, "Helvetica Neue", Arial, sans-serif;
 
     /* --- Ритм и размеры --------------------------------------------------- */
-    --pad-x:     clamp(1.25rem, 5vw, 5rem);   /* горизонтальные поля страницы */
+    --pad-x:     clamp(1.25rem, 5vw, 5rem);   /* минимальные поля у края окна */
+
+    /* Ширина колонки контента и боковое поле, которое её держит по центру.
+       Блоки при этом остаются во всю ширину окна — фон шапки, тёмных секций
+       и подвала не рвётся, внутрь загоняется только содержимое.
+       До 1440px поле равно --pad-x и ничего не меняется. */
+    --content-w: 80rem;                       /* 1280px — сама колонка        */
+    --gutter:    max(var(--pad-x), calc((100% - var(--content-w)) / 2));
     --pad-y:     clamp(4rem, 10vw, 8.75rem);  /* вертикальный ритм секции     */
     --gap:       0.875rem;                    /* базовый зазор сеток          */
     --gap-lg:    clamp(1.75rem, 5vw, 4rem);
@@ -135,7 +154,7 @@
   .section       { padding-block: var(--pad-y); }
   .section--night{ background: var(--c-night); }
 
-  .wrap { padding-inline: var(--pad-x); }
+  .wrap { padding-inline: var(--gutter); }
 
   /* Шапка секции: надзаголовок + h2 + лид */
   .section-head { max-width: var(--measure); margin-bottom: clamp(2rem, 6vw, 3.875rem); }
@@ -203,7 +222,7 @@
     background: var(--c-accent);
   }
 
-  .lead      { color: var(--c-ink-soft); max-width: 52ch; line-height: 1.5; }
+  .lead      { font-size: var(--fs-lead); color: var(--c-ink-soft); max-width: 52ch; line-height: 1.5; }
   .label     { font-size: var(--fs-label); letter-spacing: 0.16em; text-transform: uppercase; color: var(--c-ink-mute); }
   .label--accent { color: var(--c-accent); }
   .accent    { color: var(--c-accent); }
@@ -252,7 +271,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 1rem var(--pad-x);
+    padding: 1rem var(--gutter);
     padding-top: max(1rem, env(safe-area-inset-top));
     color: var(--c-night-text);
     transition: background-color .35s, color .35s, border-color .35s;
@@ -302,7 +321,7 @@
     flex-direction: column;
     justify-content: center;
     gap: 0.375rem;
-    padding: calc(env(safe-area-inset-top) + 1.5rem) var(--pad-x) 2.5rem;
+    padding: calc(env(safe-area-inset-top) + 1.5rem) var(--gutter) 2.5rem;
     background: var(--c-night);
     transform: translateY(-100%);
     transition: transform .5s var(--ease);
@@ -325,7 +344,7 @@
   .menu__close {
     position: absolute;
     top: calc(env(safe-area-inset-top) + 1.25rem);
-    right: var(--pad-x);
+    right: var(--gutter);
     font-size: var(--fs-label);
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -358,10 +377,10 @@
     position: relative;
     z-index: 2;
     width: 100%;
-    padding: 0 var(--pad-x) clamp(2rem, 7vw, 4.625rem);
+    padding: 0 var(--gutter) clamp(2rem, 7vw, 4.625rem);
   }
   .hero h1        { max-width: 16ch; }
-  .hero__sub      { margin-top: 1.375rem; max-width: 44ch; color: color-mix(in srgb, var(--c-ink) 82%, transparent); }
+  .hero__sub      { margin-top: 1.375rem; font-size: var(--fs-lead); max-width: 44ch; color: color-mix(in srgb, var(--c-ink) 82%, transparent); }
 
   .stats {
     display: grid;
@@ -370,8 +389,8 @@
     border-top: 1px solid color-mix(in srgb, var(--c-ink) 18%, transparent);
   }
   .stats__item  { padding: 1.25rem 0.875rem 0; }
-  .stats__value { display: block; font-size: var(--fs-heading); font-weight: 600; letter-spacing: -0.03em; }
-  .stats__label { font-size: var(--fs-label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--c-ink-soft); }
+  .stats__value { display: block; font-size: var(--fs-number); font-weight: 600; letter-spacing: -0.03em; line-height: var(--lh-snug); }
+  .stats__label { display: block; margin-top: 0.25rem; font-size: var(--fs-label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--c-ink-soft); }
 
   /* --- Карточка ---------------------------------------------------------- */
   .card {
@@ -574,12 +593,14 @@
 
   /* --- Подвал ------------------------------------------------------------ */
   .footer {
-    padding: clamp(2.875rem, 7vw, 5.375rem) var(--pad-x) 2.5rem;
+    padding: clamp(2.875rem, 7vw, 5.375rem) var(--gutter) 2.5rem;
     background: var(--c-night);
     color: var(--c-ink-soft);
+    font-size: var(--fs-label);
+    line-height: 1.9;
   }
-  .footer__logo     { width: 190px; margin-bottom: 2rem; }
-  .footer__logo svg { width: 100%; height: auto; }
+  .footer__logo     { margin-bottom: 2rem; }
+  .footer__logo svg { width: 190px; height: auto; }
   .footer__logo .ac path { fill: var(--c-accent); }
 
   .footer__grid {
