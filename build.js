@@ -270,9 +270,8 @@ const field = (f) =>
             aria-label="${esc(f.label)}"${f.required ? ' required' : ''}>`;
 
 /** Слева — реквизиты и карта, справа — форма. */
-const renderContacts = (c, company) => {
+const renderContacts = (c) => {
   const f = c.form;
-  const map = `https://yandex.ru/map-widget/v1/?text=${encodeURIComponent(company.address)}&z=17`;
   return `
 <section class="section wrap" id="${esc(c.id)}">
   ${sectionHead(c)}
@@ -283,9 +282,6 @@ const renderContacts = (c, company) => {
         ${join(c.details, (d) => `<dt class="label">${esc(d.term)}</dt>
         <dd${d.lead ? ' class="is-lead"' : ''}>${d.href ? `<a href="${esc(d.href)}">${lines(d.value)}</a>` : lines(d.value)}</dd>`)}
       </dl>
-      <div class="map">
-        <iframe src="${esc(map)}" title="Карта: ${esc(company.address)}" loading="lazy" allowfullscreen></iframe>
-      </div>
     </div>
 
     <form class="lead-form reveal" data-form novalidate>
@@ -317,8 +313,7 @@ const renderFooter = (c, logoFull, base = '') => `
   </div>
   <div class="footer__logo">${logoFull}</div>
   <div class="footer__bottom">
-    <a href="${esc(c.footer.privacyHref)}">${esc(c.footer.privacyLabel)}</a>
-    <p class="footer__legal">${esc(c.footer.legal)}</p>
+    <a href="${esc(sectionLink(c.footer.privacyHref, base))}">${esc(c.footer.privacyLabel)}</a>
   </div>
 </footer>`;
 
@@ -495,7 +490,7 @@ ${renderAnalytics(c.analytics)}
 ${renderAbout(c.about)}
 ${renderReviews(c.reviews)}
 ${renderFaq(c.faq)}
-${renderContacts(c.contacts, c.company)}
+${renderContacts(c.contacts)}
 </main>
 
 ${renderFooter(c, logoFull)}
