@@ -209,7 +209,7 @@ const renderAnalytics = (a) => `
       </ul>
       ${buttonRow(a.buttons, { primary: 'accent', ghost: 'ghost', default: 'accent' })}
     </div>
-    <div class="reveal">${picture(a.image, { sizes: '(min-width: 54rem) 45vw, 100vw' })}</div>
+    <div class="reveal split__media">${picture(a.image, { sizes: '(min-width: 54rem) 45vw, 100vw' })}</div>
   </div>
 </section>`;
 
