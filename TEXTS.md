@@ -1018,56 +1018,6 @@ deals
 
 ## Подвал
 
-### 1.
-
-**Подпись**
-
-<!--footer.columns.0.links.0.label|text-->
-Услуги
-<!--конец-->
-
-**Подпись**
-
-<!--footer.columns.0.links.1.label|text-->
-Как работаем
-<!--конец-->
-
-**Подпись**
-
-<!--footer.columns.0.links.2.label|text-->
-География
-<!--конец-->
-
-### 2.
-
-**Подпись**
-
-<!--footer.columns.1.links.0.label|text-->
-О компании
-<!--конец-->
-
-**Подпись**
-
-<!--footer.columns.1.links.1.label|text-->
-Контакты
-<!--конец-->
-
-**Подпись**
-
-<!--footer.columns.1.links.2.label|text-->
-+7 (8412) 49-49-49
-<!--конец-->
-
-### 3.
-
-**lines**
-
-<!--footer.columns.2.lines|lines-->
-Головной офис: Пенза, улица Кулакова, 2
-Пн–Пт 09:00–19:00
-Сделки — по России
-<!--конец-->
-
 **privacyLabel**
 
 <!--footer.privacyLabel|text-->

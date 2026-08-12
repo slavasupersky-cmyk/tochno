@@ -279,8 +279,10 @@ const renderContacts = (c) => {
 
     <div class="reveal">
       <dl class="details">
-        ${join(c.details, (d) => `<dt class="label">${esc(d.term)}</dt>
-        <dd${d.lead ? ' class="is-lead"' : ''}>${d.href ? `<a href="${esc(d.href)}">${lines(d.value)}</a>` : lines(d.value)}</dd>`)}
+        ${join(c.details, (d) => `<div class="details__row">
+          <dt class="label">${esc(d.term)}</dt>
+          <dd${d.lead ? ' class="is-lead"' : ''}>${d.href ? `<a href="${esc(d.href)}">${lines(d.value)}</a>` : lines(d.value)}</dd>
+        </div>`)}
       </dl>
     </div>
 
@@ -304,13 +306,6 @@ const renderContacts = (c) => {
 
 const renderFooter = (c, logoFull, base = '') => `
 <footer class="footer on-night">
-  <div class="footer__grid">
-    ${join(c.footer.columns, (col) => `<div>${
-      col.links
-        ? col.links.map((l) => `<a href="${esc(sectionLink(l.href, base))}">${esc(l.label)}</a>`).join('<br>')
-        : col.lines.map(esc).join('<br>')
-    }</div>`)}
-  </div>
   <div class="footer__logo">${logoFull}</div>
   <div class="footer__bottom">
     <a href="${esc(sectionLink(c.footer.privacyHref, base))}">${esc(c.footer.privacyLabel)}</a>
