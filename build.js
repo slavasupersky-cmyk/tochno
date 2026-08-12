@@ -280,12 +280,11 @@ const renderContacts = (c, company) => {
     <div class="reveal">
       <dl class="details">
         ${join(c.details, (d) => `<dt class="label">${esc(d.term)}</dt>
-        <dd>${d.href ? `<a href="${esc(d.href)}">${lines(d.value)}</a>` : lines(d.value)}</dd>`)}
+        <dd${d.lead ? ' class="is-lead"' : ''}>${d.href ? `<a href="${esc(d.href)}">${lines(d.value)}</a>` : lines(d.value)}</dd>`)}
       </dl>
       <div class="map">
         <iframe src="${esc(map)}" title="Карта: ${esc(company.address)}" loading="lazy" allowfullscreen></iframe>
       </div>
-      <a class="map__link label" href="${esc(encodeURI(company.mapUrl))}" target="_blank" rel="noopener">${esc(company.mapLinkLabel)}</a>
     </div>
 
     <form class="lead-form reveal" data-form novalidate>
@@ -331,6 +330,91 @@ const renderFooter = (c, logoFull, base = '') => `
 const hash = (file) =>
   crypto.createHash('md5').update(fs.readFileSync(file)).digest('hex').slice(0, 8);
 
+
+/** Иконки, тема и карточка для мессенджеров — одинаково на всех страницах. */
+const socialHead = (c, { title, description, url }) => `
+<meta name="theme-color" content="${esc(c.meta.themeColor)}">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${esc(c.company.name)}">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${esc(url)}">
+<meta property="og:image" content="${esc(c.meta.url + c.meta.ogImage)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(c.company.name)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(title)}">
+<meta name="twitter:description" content="${esc(description)}">
+<meta name="twitter:image" content="${esc(c.meta.url + c.meta.ogImage)}">
+`;
+
+/**
+ * Разметка для поисковиков. Две схемы:
+ * организация с адресом и часами работы — чтобы карточка компании
+ * собиралась корректно, и список вопросов-ответов из блока FAQ.
+ */
+const jsonLd = (c) => {
+  // «Пн–Пт 09:00–19:00» → все дни диапазона, а не только его концы:
+  // schema.org ждёт перечисление, интервал он не понимает.
+  const week = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const en = { 'Пн': 'Monday', 'Вт': 'Tuesday', 'Ср': 'Wednesday', 'Чт': 'Thursday',
+               'Пт': 'Friday', 'Сб': 'Saturday', 'Вс': 'Sunday' };
+  const hours = c.company.hours.map((line) => {
+    const [range, time] = line.split(' ');
+    const [from, to] = range.split('–');
+    const [opens, closes] = time.split('–');
+    const days = to
+      ? week.slice(week.indexOf(from), week.indexOf(to) + 1)
+      : [from];
+    return {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: days.map((d) => en[d]),
+      opens, closes,
+    };
+  });
+
+  const org = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateAgent',
+    '@id': c.meta.url + '#organization',
+    name: c.company.name,
+    description: c.meta.description,
+    url: c.meta.url,
+    image: c.meta.url + c.meta.ogImage,
+    logo: c.meta.url + 'icons/icon-512.png',
+    telephone: c.company.phone,
+    priceRange: '$$',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: c.company.addressShort,
+      addressLocality: 'Пенза',
+      addressRegion: 'Пензенская область',
+      addressCountry: 'RU',
+    },
+    areaServed: [{ '@type': 'Country', name: 'Россия' }],
+    openingHoursSpecification: hours,
+    foundingDate: '2002',
+  };
+
+  const faq = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: c.faq.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  };
+
+  return `<script type="application/ld+json">${JSON.stringify([org, faq])}</script>`;
+};
+
 /** Общая «шапка» документа для обеих страниц. */
 const head = (c, { title, description, canonical, assets, extra = '' }) => `<!DOCTYPE html>
 <html lang="${esc(c.meta.lang)}">
@@ -342,6 +426,7 @@ const head = (c, { title, description, canonical, assets, extra = '' }) => `<!DO
 <meta name="description" content="${esc(description)}">
 <meta name="generator" content="build.js · ${new Date().toISOString().slice(0, 16)}Z">
 <link rel="canonical" href="${esc(canonical)}">
+${socialHead(c, { title, description, url: canonical })}
 <link rel="stylesheet" href="style.css?v=${assets.css}">
 <script>document.documentElement.className = "js";</script>
 ${extra}</head>`;
@@ -387,24 +472,11 @@ const renderPage = (c, { logoMark, logoFull, assets }) => `<!DOCTYPE html>
 <meta name="generator" content="build.js · ${new Date().toISOString().slice(0, 16)}Z">
 
 <link rel="canonical" href="${esc(c.meta.url)}">
-<meta property="og:type" content="website">
-<meta property="og:title" content="${esc(c.meta.title)}">
-<meta property="og:description" content="${esc(c.meta.description)}">
-<meta property="og:image" content="${esc(c.meta.url)}${esc(c.meta.ogImage)}">
-<meta property="og:locale" content="ru_RU">
+${socialHead(c, { title: c.meta.shareTitle, description: c.meta.description, url: c.meta.url })}
 <link rel="preload" as="image" href="${esc(c.hero.image.src)}.webp" type="image/webp" fetchpriority="high">
 <link rel="stylesheet" href="style.css?v=${assets.css}">
 <script>document.documentElement.className = "js";</script>
-<script type="application/ld+json">${JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': 'RealEstateAgent',
-  name: c.company.name,
-  telephone: c.company.phone,
-  url: c.meta.url,
-  image: c.meta.url + c.meta.ogImage,
-  address: { '@type': 'PostalAddress', streetAddress: c.company.addressShort, addressLocality: 'Пенза', addressCountry: 'RU' },
-  openingHours: c.company.hours,
-})}</script>
+${jsonLd(c)}
 </head>
 <body>
 ${renderHeader(c, logoMark)}
@@ -459,6 +531,20 @@ function build() {
   fs.mkdirSync(DIST, { recursive: true });
 
   // Сначала статика: адреса страниц зависят от её содержимого.
+  copyDir(path.join(SRC, 'icons'), path.join(DIST, 'icons'));
+  fs.writeFileSync(path.join(DIST, 'site.webmanifest'), JSON.stringify({
+    name: content.company.name,
+    short_name: 'ТОЧНО.',
+    description: content.meta.description,
+    start_url: './',
+    display: 'standalone',
+    background_color: content.meta.themeColor,
+    theme_color: content.meta.themeColor,
+    icons: [
+      { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  }, null, 2));
   fs.writeFileSync(path.join(DIST, 'style.css'), fs.readFileSync(path.join(SRC, 'styles/style.css')));
   fs.writeFileSync(path.join(DIST, 'site.js'),   fs.readFileSync(path.join(SRC, 'scripts/site.js')));
   const assets = {
