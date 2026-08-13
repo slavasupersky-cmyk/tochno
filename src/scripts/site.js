@@ -15,6 +15,31 @@
     sync();
   }
 
+  /* --- Меню --------------------------------------------------------------
+     Открывается и закрывается на CSS через :target — без скрипта тоже
+     работает. Скрипт добавляет две привычные мелочи: закрытие по Esc
+     и возврат ровно туда, откуда меню открыли, а не наверх страницы. */
+  const menu = document.getElementById('menu');
+  if (menu) {
+    let returnTo = 0;
+
+    const closeMenu = () => {
+      if (location.hash !== '#menu') return;
+      const y = returnTo;
+      history.replaceState(null, '', location.pathname + location.search);
+      scrollTo({ top: y, behavior: 'auto' });
+    };
+
+    document.querySelectorAll('a[href="#menu"]').forEach((opener) => {
+      opener.addEventListener('click', () => { returnTo = scrollY; });
+    });
+
+    const closer = menu.querySelector('.menu__close');
+    if (closer) closer.addEventListener('click', (e) => { e.preventDefault(); closeMenu(); });
+
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+  }
+
   /* --- Показатели на первом экране ---------------------------------------
      Числа докручиваются от нуля, когда блок появляется на экране.
      В разметке лежат готовые значения, так что без скрипта и при
@@ -86,15 +111,48 @@
     form.addEventListener('change', sync);
     sync();
 
-    form.addEventListener('submit', (e) => {
+    /* Куда уходит заявка — из атрибута data-endpoint, а он из content.json.
+       Пока адрес не задан, форма НЕ показывает «заявка принята»: врать
+       посетителю хуже, чем честно попросить позвонить. */
+    const endpoint = form.dataset.endpoint || '';
+    const errorBox = form.querySelector('[data-error]');
+
+    const showError = (text) => {
+      errorBox.textContent = text;
+      errorBox.classList.add('is-visible');
+    };
+    const hideError = () => errorBox.classList.remove('is-visible');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      hideError();
       if (!form.checkValidity()) { form.reportValidity(); return; }
 
-      // TODO: заменить на реальную отправку (fetch на бэкенд или CRM).
-      success.classList.add('is-visible');
+      if (!endpoint) {
+        console.error('[форма] Не задан data-endpoint — заявка никуда не уйдёт.');
+        showError(errorBox.dataset.noEndpoint);
+        return;
+      }
+
       submit.disabled = true;
-      submit.classList.remove('is-ready');
-      submit.textContent = submit.dataset.sentLabel || 'Отправлено';
+      submit.textContent = submit.dataset.sendingLabel;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          body: new FormData(form),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        success.classList.add('is-visible');
+        submit.classList.remove('is-ready');
+        submit.textContent = submit.dataset.sentLabel;
+        form.reset();
+      } catch (err) {
+        console.error('[форма] Не удалось отправить заявку:', err);
+        showError(errorBox.dataset.failed);
+        submit.disabled = false;
+        submit.textContent = submit.dataset.label;
+      }
     });
   }
 

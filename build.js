@@ -51,14 +51,13 @@ const heading = (level, parts, extra = '') => {
 const join = (arr, fn) => arr.map(fn).join('\n');
 
 /** <picture> с WebP и JPEG-фолбэком. `src` — путь без расширения. */
-const picture = (img, { className = '', loading = 'lazy', sizes = null } = {}) => {
+const picture = (img, { className = '', loading = 'lazy' } = {}) => {
   const cls = className ? ` class="${className}"` : '';
   const attrs = [
     `src="${esc(img.src)}.jpg"`,
     `alt="${esc(img.alt)}"`,
     `loading="${loading}"`,
     loading === 'eager' ? 'fetchpriority="high"' : 'decoding="async"',
-    sizes ? `sizes="${sizes}"` : null,
   ].filter(Boolean).join(' ');
   return `<picture${cls}>
         <source srcset="${esc(img.src)}.webp" type="image/webp">
@@ -132,7 +131,7 @@ const ru = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 const renderHero = (h, deals) => `
 <section class="hero on-night">
-  <div class="hero__media">${picture(h.image, { loading: 'eager', sizes: '100vw' })}</div>
+  <div class="hero__media">${picture(h.image, { loading: 'eager' })}</div>
   <div class="hero__inner">
     <p class="eyebrow">${esc(h.eyebrow)}</p>
     ${heading(1, h.title)}
@@ -163,7 +162,7 @@ const renderServices = (s) => `
   ${sectionHead(s)}
   <div class="grid reveal">
     ${join(s.items, (item) => `<article class="card">
-      <div class="card__media">${picture(item.image, { sizes: '(min-width: 60rem) 25vw, 100vw' })}</div>
+      <div class="card__media">${picture(item.image, { })}</div>
       <div class="card__body">
         <h3>${esc(item.title)}</h3>
         <p>${esc(item.text)}</p>
@@ -210,14 +209,14 @@ const renderAnalytics = (a) => `
       </ul>
       ${buttonRow(a.buttons, { primary: 'accent', ghost: 'ghost', default: 'accent' })}
     </div>
-    <div class="reveal split__media">${picture(a.image, { sizes: '(min-width: 54rem) 45vw, 100vw' })}</div>
+    <div class="reveal split__media">${picture(a.image, { })}</div>
   </div>
 </section>`;
 
 const renderAbout = (a) => `
 <section class="section wrap" id="${esc(a.id)}">
   <div class="split split--reverse">
-    <div class="reveal">${picture(a.image, { className: 'portrait', sizes: '(min-width: 54rem) 40vw, 100vw' })}</div>
+    <div class="reveal">${picture(a.image, { className: 'portrait' })}</div>
     <div class="reveal">
       <p class="eyebrow">${esc(a.eyebrow)}</p>
       ${heading(2, a.title)}
@@ -237,7 +236,7 @@ const renderReviews = (r) => `
   <div class="wrap">${sectionHead(r)}</div>
   <div class="scroller reveal" tabindex="0" role="region" aria-label="Отзывы клиентов">
     ${join(r.items, (item) => `<blockquote class="review">
-      <div class="review__stars" aria-label="Оценка ${item.stars} из 5">${'★'.repeat(item.stars)}${'☆'.repeat(5 - item.stars)}</div>
+      <div class="review__stars" role="img" aria-label="Оценка ${item.stars} из 5">${'★'.repeat(item.stars)}${'☆'.repeat(5 - item.stars)}</div>
       <p>${esc(item.text)}</p>
       <footer class="review__who label">${esc(item.who)}</footer>
     </blockquote>`)}
@@ -262,12 +261,17 @@ const renderFaq = (f) => `
   </div>
 </section>`;
 
-const field = (f) =>
-  f.type === 'textarea'
+/** Подсказка автозаполнения. Задаётся в content.json, иначе — по типу поля. */
+const AUTOCOMPLETE = { tel: 'tel', email: 'email' };
+
+const field = (f) => {
+  const ac = f.autocomplete || AUTOCOMPLETE[f.type] || 'off';
+  return f.type === 'textarea'
     ? `<textarea name="${esc(f.name)}" rows="${f.rows || 4}" placeholder="${esc(f.placeholder)}"
-            aria-label="${esc(f.label)}"${f.required ? ' required' : ''}></textarea>`
+            aria-label="${esc(f.label)}" autocomplete="off"${f.required ? ' required' : ''}></textarea>`
     : `<input type="${esc(f.type)}" name="${esc(f.name)}" placeholder="${esc(f.placeholder)}"
-            aria-label="${esc(f.label)}"${f.required ? ' required' : ''}>`;
+            aria-label="${esc(f.label)}" autocomplete="${esc(ac)}"${f.type === 'tel' ? ' inputmode="tel"' : ''}${f.required ? ' required' : ''}>`;
+};
 
 /** Слева — реквизиты и карта, справа — форма. */
 const renderContacts = (c) => {
@@ -286,7 +290,7 @@ const renderContacts = (c) => {
       </dl>
     </div>
 
-    <form class="lead-form reveal" data-form novalidate>
+    <form class="lead-form reveal" data-form novalidate${f.endpoint ? ` data-endpoint="${esc(f.endpoint)}"` : ''}>
       <div class="form__fields">
         ${join(f.fields, field)}
       </div>
@@ -296,7 +300,12 @@ const renderContacts = (c) => {
           <span>${esc(con.text)}${con.linkLabel ? ` <a href="${esc(con.linkHref)}">${esc(con.linkLabel)}</a>` : ''}</span>
         </label>`)}
       </div>
-      <button class="btn btn--accent" type="submit" data-submit data-sent-label="${esc(f.submitted)}" disabled>${esc(f.submit)}</button>
+      <button class="btn btn--accent" type="submit" data-submit
+              data-label="${esc(f.submit)}" data-sending-label="${esc(f.sending)}"
+              data-sent-label="${esc(f.submitted)}" disabled>${esc(f.submit)}</button>
+      <noscript><p class="form__error is-visible">${esc(f.noscript)}</p></noscript>
+      <p class="form__error" data-error role="alert"
+         data-no-endpoint="${esc(f.errorNoEndpoint)}" data-failed="${esc(f.error)}"></p>
       <p class="form__success" data-success role="status">${esc(f.success)}</p>
     </form>
 
@@ -455,6 +464,35 @@ ${renderFooter(c, logoFull, './')}
 </html>
 `;
 
+/** Промах по адресу. Меню и подвал ведут на главную по абсолютному адресу:
+ *  404 может открыться из любой вложенной папки, относительный путь соврёт. */
+const render404 = (c, { logoMark, logoFull, assets }) => `${head(c, {
+  assets,
+  title: `${c.notFound.title} — ${c.company.name}`,
+  description: c.notFound.description,
+  canonical: c.meta.url + '404.html',
+  extra: '<meta name="robots" content="noindex">\n',
+})}
+<body>
+${renderHeader(c, logoMark)}
+${renderMenu(c, c.meta.url)}
+
+<main id="top" class="section wrap doc">
+  <p class="eyebrow">${esc(c.notFound.eyebrow)}</p>
+  ${heading(1, c.notFound.title)}
+  <p class="lead">${esc(c.notFound.text)}</p>
+  <div class="btn-row">
+    <a class="btn btn--accent" href="${esc(c.meta.url)}">${esc(c.notFound.homeLabel)}</a>
+    <a class="btn btn--outline" href="${esc(c.company.phoneHref)}">${esc(c.company.phone)}</a>
+  </div>
+</main>
+
+${renderFooter(c, logoFull, c.meta.url)}
+<script src="site.js?v=${assets.js}" defer></script>
+</body>
+</html>
+`;
+
 const renderPage = (c, { logoMark, logoFull, assets }) => `<!DOCTYPE html>
 <html lang="${esc(c.meta.lang)}">
 <head>
@@ -535,8 +573,8 @@ function build() {
     background_color: content.meta.themeColor,
     theme_color: content.meta.themeColor,
     icons: [
-      { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { src: 'icons/icon-192.png', type: 'image/png' },
+      { src: 'icons/icon-512.png', type: 'image/png' },
     ],
   }, null, 2));
   fs.writeFileSync(path.join(DIST, 'style.css'), fs.readFileSync(path.join(SRC, 'styles/style.css')));
@@ -548,6 +586,20 @@ function build() {
 
   fs.writeFileSync(path.join(DIST, 'index.html'),   renderPage(content,    { logoMark, logoFull, assets }));
   fs.writeFileSync(path.join(DIST, 'privacy.html'), renderPrivacy(content, { logoMark, logoFull, assets }));
+  fs.writeFileSync(path.join(DIST, '404.html'),     render404(content,     { logoMark, logoFull, assets }));
+
+  // Файлы для поисковиков. Политику не закрываем в robots.txt: у неё уже стоит
+  // noindex, а Disallow не даст роботу его прочитать — страница осталась бы
+  // в выдаче без описания. Плюс это обязательный к показу документ.
+  const site = content.meta.url.replace(/\/?$/, '/');
+  const today = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(DIST, 'robots.txt'),
+    `User-agent: *\nAllow: /\n\nSitemap: ${site}sitemap.xml\n`);
+  fs.writeFileSync(path.join(DIST, 'sitemap.xml'),
+    '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    `  <url><loc>${site}</loc><lastmod>${today}</lastmod><changefreq>monthly</changefreq><priority>1.0</priority></url>\n` +
+    '</urlset>\n');
   copyDir(path.join(SRC, 'images'), path.join(DIST, 'images'));
 
   const kb = (p) => (fs.statSync(p).size / 1024).toFixed(1).padStart(6) + ' КБ';

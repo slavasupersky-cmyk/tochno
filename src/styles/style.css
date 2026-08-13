@@ -5,7 +5,11 @@
    ----------------------------------------------------------------------------
    Порядок слоёв фиксирован через @layer, поэтому специфичность селекторов
    больше ни на что не влияет: компонент всегда бьёт раскладку, утилита — всё.
-   Никаких !important и никаких повторных объявлений одного правила.
+   Повторных объявлений одного правила нет.
+
+   !important встречается ровно в двух местах и оба вне слоёв: при отключённой
+   анимации и при печати. Там он и уместен — эти режимы должны перебивать
+   любой слой разом. Внутри слоёв его нет и быть не должно.
    ========================================================================== */
 
 @layer tokens, base, layout, components, utilities;
@@ -21,13 +25,14 @@
     /* --- Цвет ------------------------------------------------------------ */
     --c-ink:        #101010;  /* основной текст            */
     --c-ink-soft:   #5a5a5a;  /* вторичный текст           */
-    --c-ink-mute:   #8a8a8a;  /* подписи, лейблы           */
+    --c-ink-mute:   #757575;  /* подписи, лейблы — 4.6:1   */
     --c-paper:      #ffffff;  /* фон страницы              */
     --c-surface:    #fafafa;  /* поля ввода, плашки        */
     --c-line:       #e6e6e6;  /* границы                   */
-    --c-accent:     #0f8a4f;  /* акцент на светлом         */
+    --c-accent:     #0d7a46;  /* акцент на светлом — 5.4:1 */
     --c-accent-ink: #ffffff;  /* текст на акценте          */
     --c-night:      #0b0b0b;  /* тёмные секции и меню      */
+    --c-danger:     #b3261e;  /* ошибка формы — 6.4:1      */
 
     /* Токены тёмных секций — не зависят от темы страницы.
        Ими пользуются .section--night, .menu и footer. */
@@ -103,6 +108,7 @@
       --c-accent:     #aeea00;
       --c-accent-ink: #0a0a0a;
       --c-night:      #141414;
+      --c-danger:     #ff6b6b;
     }
   }
 }
@@ -292,6 +298,7 @@
   .header.is-solid,
   html:not(.js) .header {
     background: color-mix(in srgb, var(--c-paper) 94%, transparent);
+    -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     border-bottom-color: var(--c-line);
     color: var(--c-ink);
@@ -328,9 +335,22 @@
     padding: calc(env(safe-area-inset-top) + 1.5rem) var(--gutter) 2.5rem;
     background: var(--c-night);
     transform: translateY(-100%);
-    transition: transform .5s var(--ease);
+    /* visibility убирает закрытое меню из обхода по Tab и из скринридера.
+       Задержка равна времени ухода, иначе анимация обрывается на середине. */
+    visibility: hidden;
+    transition: transform .5s var(--ease), visibility 0s linear .5s;
   }
-  .menu:target { transform: translateY(0); }
+  .menu:target {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform .5s var(--ease), visibility 0s;
+  }
+
+  /* Фон не прокручивается под открытым меню. */
+  @supports selector(:has(*)) {
+    html:has(.menu:target),
+    html:has(.menu:target) body { overflow: hidden; }
+  }
 
   .menu__item {
     padding: 0.5rem 0;
@@ -597,6 +617,9 @@
   .form__success { display: none; margin-top: 1rem; color: var(--c-accent); font-weight: 600; }
   .form__success.is-visible { display: block; }
 
+  .form__error { display: none; margin-top: 1rem; color: var(--c-danger); font-weight: 600; }
+  .form__error.is-visible { display: block; }
+
   /* Кнопка отправки: серая и недоступная, пока форма не заполнена,
      зелёная — как только всё на месте. Состояние ставит site.js. */
   .lead-form [data-submit] {
@@ -714,4 +737,32 @@
   @media (prefers-reduced-motion: reduce) {
     .js .reveal { opacity: 1; transform: none; }
   }
+}
+
+/* ==========================================================================
+   ЗАПАСНОЙ ВАРИАНТ ДЛЯ СТАРЫХ БРАУЗЕРОВ
+   color-mix() появился в Safari 16.2 и Chrome 111. Без него важнее всего
+   фон прилипшей шапки: иначе текст ложится прямо на контент.
+   ========================================================================== */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  @layer components {
+    .btn--ghost { border-color: rgba(127, 127, 127, .55); }
+    .header.is-solid,
+    html:not(.js) .header { background: var(--c-paper); }
+    .hero__sub { color: var(--c-ink-soft); }
+    .stats     { border-top-color: var(--c-line); }
+  }
+}
+
+/* ==========================================================================
+   ПЕЧАТЬ
+   Фон и декор убираем, контакты оставляем. Здесь !important уместен:
+   печать перекрывает экранные правила из всех слоёв разом.
+   ========================================================================== */
+@media print {
+  .header, .menu, .burger, .lead-form, .scroller, picture { display: none !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; }
+  section { break-inside: avoid; }
 }
